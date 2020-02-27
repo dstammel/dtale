@@ -404,6 +404,10 @@ def test_build_column(unittest):
                     query_string=dict(type='datetime', name=conv, cfg=json.dumps(dict(col='d', conversion=conv)))
                 )
 
+            response = c.get('/dtale/code-export/{}'.format(c.port))
+            response_data = json.loads(response.data)
+            assert response_data['success']
+
 
 @pytest.mark.unit
 def test_build_column_bins(unittest):
@@ -601,6 +605,10 @@ def test_get_data(unittest, test_data):
             unittest.assertEqual(response_data['results'], expected, 'should return data at index 1 w/ sort')
             unittest.assertEqual(global_state.SETTINGS[c.port], {'sort': [['security_id', 'ASC']]},
                                  'should update settings')
+
+            response = c.get('/dtale/code-export/{}'.format(c.port))
+            response_data = json.loads(response.data)
+            assert response_data['success']
 
             params = dict(ids=json.dumps(['0']), query='security_id == 1')
             response = c.get('/dtale/data/{}'.format(c.port), query_string=params)
@@ -1140,6 +1148,15 @@ def test_get_chart_data(unittest, test_data, rolling_data):
 
 
 @pytest.mark.unit
+def test_code_export():
+    with app.test_client() as c:
+        with ExitStack() as stack:
+            stack.enter_context(mock.patch('dtale.views.build_code_export', mock.Mock(side_effect=Exception())))
+            response = c.get('/dtale/code-export/1')
+            assert 'error' in json.loads(response.data)
+
+
+@pytest.mark.unit
 def test_version_info():
     with app.test_client() as c:
         with mock.patch(
@@ -1178,7 +1195,7 @@ def test_main():
 @pytest.mark.unit
 def test_200():
     paths = ['/dtale/main/1', '/dtale/iframe/1', '/dtale/popup/test/1', 'site-map', 'version-info', 'health',
-             '/charts/1', '/charts/popup/1']
+             '/charts/1', '/charts/popup/1', '/dtale/code-popup']
     with app.test_client() as c:
         for path in paths:
             response = c.get(path)
